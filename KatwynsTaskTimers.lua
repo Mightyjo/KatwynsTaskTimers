@@ -7,6 +7,7 @@ KatwynsTaskTimers = {
 	variablesVersion = 1,
 	Default = {
 	  isDebug = false,
+	  isHidden = false,
 	  offsetX = 200,
 	  offsetY = 25,
 	},
@@ -28,6 +29,7 @@ function KatwynsTaskTimers:CreateMenu()
     
     
     local debugOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_DEBUG)
+	local hiddenOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_HIDDEN)
     local optionsTable = {
         {
             type = "checkbox",
@@ -37,6 +39,19 @@ function KatwynsTaskTimers:CreateMenu()
             end,
             setFunc = function(value)
                 self.savedVariables.isDebug = value
+            end,
+            width = "full",
+            default = false,
+        },
+		{
+            type = "checkbox",
+            name = hiddenOptionName,
+            getFunc = function()
+                return self.savedVariables.isHidden
+            end,
+            setFunc = function(value)
+                self.savedVariables.isHidden = value
+				self:RedrawKttFrame()
             end,
             width = "full",
             default = false,
@@ -117,26 +132,37 @@ function KatwynsTaskTimers:Log(level, text, ...)
 
 end
 
-function KatwynsTaskTimers:OnFrameMoveStop()
+function KatwynsTaskTimers.OnFrameMoveStop()
 
     KatwynsTaskTimers.savedVariables.offsetX = KttFrame:GetLeft()
     KatwynsTaskTimers.savedVariables.offsetY = KttFrame:GetTop()
 	
 end
 
-function KatwynsTaskTimers:RestorePosition()
+function KatwynsTaskTimers.OnCloseButtonClicked()
 
-    local _offsetX = self.savedVariables.offsetX
-    local _offsetY = self.savedVariables.offsetY
+    KatwynsTaskTimers.savedVariables.isHidden = true
+    KatwynsTaskTimers.RedrawKttFrame()
+	
+end
+
+function KatwynsTaskTimers.RestorePosition()
+
+    local _offsetX = KatwynsTaskTimers.savedVariables.offsetX
+    local _offsetY = KatwynsTaskTimers.savedVariables.offsetY
     
     KttFrame:ClearAnchors()
     KttFrame:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, _offsetX, _offsetY)
 	
 end
 
-function KatwynsTaskTimers:RedrawKttFrame()
+function KatwynsTaskTimers.RedrawKttFrame()
 
-    KttFrameLabel.text = self.displayName
+    -- Should we show the timers at all?
+	KttFrame:SetHidden( KatwynsTaskTimers.savedVariables.isHidden )
+	
+	-- Are we hiding the title?
+	KttFrameLabel.text = KatwynsTaskTimers.displayName
 	
 end
 

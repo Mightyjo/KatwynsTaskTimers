@@ -1,7 +1,7 @@
 <GuiXml>
   <Controls>
-    <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true">
-      <Dimensions x="200" y="25" />
+    <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true" hidden="false">
+      <Dimensions x="300" y="100" />
       <Anchor point="BOTTOM" relativeTo="GuiRoot" relativePoint="CENTER" offsetY="-20" />
  
       <OnMoveStop>
@@ -9,10 +9,22 @@
       </OnMoveStop>
  
       <Controls>
-        <Label name="$(parent)Label" width="200" height="25" font="ZoFontWinH1" inheritAlpha="true" color="FF0000"
+	    <Backdrop name="$(parent)BG" inherits="ZO_ThinBackdrop" />
+        <Label name="$(parent)Label" width="300" height="25" font="ZoFontWindowTitle" inheritAlpha="true" 
             wrapMode="TRUNCATE" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Katwyn's Task Timers">
-          <Anchor point="TOP" relativeTo="$(parent)" relativePoint="TOP" />
+		  <AnchorFill />
         </Label>
+		<Button name="$(parent)CloseButton" inherits="ZO_ButtonBehaviorClickSound">
+			<Dimensions x="40" y="40" />
+			<Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="TOPRIGHT" offsetX="20" offsetY="-5" />
+			<Textures normal="EsoUI/Art/Buttons/closebutton_up.dds"
+				pressed="EsoUI/Art/Buttons/closebutton_down.dds"
+				mouseOver="EsoUI/Art/Buttons/closebutton_mouseover.dds"
+				disabled="EsoUI/Art/Buttons/closebutton_disabled.dds"/>
+			<OnClicked>
+				KatwynsTaskTimers.OnCloseButtonClicked()
+			</OnClicked>
+		</Button>
       </Controls>
     </TopLevelControl>
   </Controls>
