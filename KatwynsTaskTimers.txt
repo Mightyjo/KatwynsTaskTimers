@@ -1,0 +1,13 @@
+## Title: KatwynsTaskTimers
+## APIVersion: 100034 100035
+## Version: 0.1.0
+## AddonVersion: 5
+## SavedVariables: KatwynsTaskTimersVariables
+## Author: mightyjo
+## DependsOn: LibAddonMenu-2.0>=32 LibCustomMenu>=635 LibDebugLogger>=180
+
+KatwynsTaskTimers.xml
+KatwynsTaskTimers.lua
+
+lang/en.lua
+lang/$(language).lua
