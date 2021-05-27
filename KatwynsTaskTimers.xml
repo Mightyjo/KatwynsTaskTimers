@@ -1,5 +1,11 @@
 <GuiXml>
   <Controls>
+		
+	<Label name="KttFrameTimerTemplate" font="ZoFontWindowTitle" inheritAlpha="true" text="Timer" virtual="true">
+	</Label>
+	
+	<!-- Virtual control templates above this comment -->
+	
     <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true" hidden="false">
       <Dimensions x="300" y="100" />
       <Anchor point="BOTTOM" relativeTo="GuiRoot" relativePoint="CENTER" offsetY="-20" />
@@ -9,11 +15,14 @@
       </OnMoveStop>
  
       <Controls>
+	  
 	    <Backdrop name="$(parent)BG" inherits="ZO_ThinBackdrop" />
         <Label name="$(parent)Label" width="300" height="25" font="ZoFontWindowTitle" inheritAlpha="true" 
-            wrapMode="TRUNCATE" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Katwyn's Task Timers">
+            wrapMode="TRUNCATE" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Task Timers" hidden="false">
 		  <AnchorFill />
         </Label>
+		
+		
 		<Button name="$(parent)CloseButton" inherits="ZO_ButtonBehaviorClickSound">
 			<Dimensions x="40" y="40" />
 			<Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="TOPRIGHT" offsetX="20" offsetY="-5" />
