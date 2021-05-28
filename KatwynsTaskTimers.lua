@@ -10,6 +10,7 @@ KatwynsTaskTimers = {
 	  isHidden = false,
 	  offsetX = 200,
 	  offsetY = 25,
+	  alpha = 0.6,
 	  isTitleHidden = false,
 	  isWritsHidden = false,
 	  isStablesHidden = false,
@@ -38,6 +39,7 @@ function KatwynsTaskTimers:CreateMenu()
     
     local debugOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_DEBUG)
 	local hiddenOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_HIDDEN)
+	local opacityOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_OPACITY)
 	local titleHiddenOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_TITLE_HIDDEN)
 	local writsHiddenOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_WRITS_HIDDEN)
 	local stablesHiddenOptionName = GetString(KATWYNS_TASK_TIMERS_OPTION_STABLES_HIDDEN)
@@ -70,6 +72,23 @@ function KatwynsTaskTimers:CreateMenu()
             width = "full",
             default = false,
         },
+		{
+		    type = "slider",
+			name = opacityOptionName,
+			min = 0,
+			max = 100,
+			step = 1,
+			clampInput = true,
+			getFunc = function()
+			    return 100 * self.savedVariables.alpha
+			end,
+			setFunc = function(value)
+			    self.savedVariables.alpha = value / 100
+				self:RedrawKttFrame()
+			end,
+			width = "full",
+			default = 60,
+		},
 		{
             type = "checkbox",
             name = titleHiddenOptionName,
@@ -225,23 +244,31 @@ function KatwynsTaskTimers:Log(level, text, ...)
 end
 
 function KatwynsTaskTimers.OnFrameMoveStop()
+    return KatwynsTaskTimers:_OnFrameMoveStop()
+end
 
-    KatwynsTaskTimers.savedVariables.offsetX = KttFrame:GetLeft()
-    KatwynsTaskTimers.savedVariables.offsetY = KttFrame:GetTop()
+function KatwynsTaskTimers:_OnFrameMoveStop()
+
+    self.savedVariables.offsetX = KttFrame:GetLeft()
+    self.savedVariables.offsetY = KttFrame:GetTop()
 	
 end
 
 function KatwynsTaskTimers.OnCloseButtonClicked()
+    return KatwynsTaskTimers:_OnCloseButtonClicked()
+end
 
-    KatwynsTaskTimers.savedVariables.isHidden = true
-    KatwynsTaskTimers.RedrawKttFrame()
+function KatwynsTaskTimers:_OnCloseButtonClicked()
+
+    self.savedVariables.isHidden = true
+    self:RedrawKttFrame()
 	
 end
 
-function KatwynsTaskTimers.RestorePosition()
+function KatwynsTaskTimers:RestorePosition()
 
-    local _offsetX = KatwynsTaskTimers.savedVariables.offsetX
-    local _offsetY = KatwynsTaskTimers.savedVariables.offsetY
+    local _offsetX = self.savedVariables.offsetX
+    local _offsetY = self.savedVariables.offsetY
     
     KttFrame:ClearAnchors()
     KttFrame:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, _offsetX, _offsetY)
@@ -249,62 +276,76 @@ function KatwynsTaskTimers.RestorePosition()
 end
 
 function KatwynsTaskTimers.InitializeTimer(control, data)
+    KatwynsTaskTimers:Debug("InitializeTimer(): Entered")
+    return KatwynsTaskTimers:_InitializeTimer(control, data)
+end
 
-    local logger = LibDebugLogger("KatwynsTaskTimers")
-    
+function KatwynsTaskTimers:_InitializeTimer(control, data)
+
+    self:Debug("_InitializeTimer(self): Entered")
+
 	control:SetFont("ZoFontWinH4")
-    control:SetText(data.key)
+	if data.text then
+      control:SetText(string.format("%s: %s", data.key, data.text))
+	else
+	  control:SetText(string.format("%s: ", data.key))
+	end
+	if data.color then
+	  ZO_SelectableLabel_SetNormalColor(control, data.color)
+	end
     
 end
 
-function KatwynsTaskTimers.RedrawKttFrame()
-    local logger = LibDebugLogger("KatwynsTaskTimers")
-	logger:Debug("RedrawKttFrame: Entered")
+function KatwynsTaskTimers:RedrawKttFrame()
+    
+	self:Debug("RedrawKttFrame: Entered")
     -- Should we show the timers at all?
-	KttFrame:SetHidden( KatwynsTaskTimers.savedVariables.isHidden )
-	if KatwynsTaskTimers.savedVariables.isHidden then
+	KttFrame:SetHidden( self.savedVariables.isHidden )
+	if self.savedVariables.isHidden then
 	  return
 	end
 	
+	KttFrame:SetAlpha( self.savedVariables.alpha )
+	
 	-- Are we hiding the title?
-	KttFrameLabel:SetHidden( KatwynsTaskTimers.savedVariables.isTitleHidden )
+	KttFrameLabel:SetHidden( self.savedVariables.isTitleHidden )
 	KttFrameLabel.text = GetString(KATWYNS_TASK_TIMERS_FRAME_TITLE)
 	
 	-- Redraw the timer list
 	local TIMER_TYPE = 1
 	local scrollList = KttFrame:GetNamedChild("TimerList")
 	
-	if scrollList then logger:Debug("RedrawKttFrame: scrollList found") end
+	if scrollList then self.logger:Debug("RedrawKttFrame: scrollList found") end
 	
 	ZO_ScrollList_Clear(scrollList)
 	
-	logger:Debug("RedrawKttFrame: Before List Entry Creation")
+	self:Debug("RedrawKttFrame: Before List Entry Creation")
 	
 	local scrollData = ZO_ScrollList_GetDataList(scrollList)
 	local timerData = {}
 	
-	if not KatwynsTaskTimers.savedVariables.isWritsHidden then
-	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Writs"})
+	if not self.savedVariables.isWritsHidden then
+	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, self:GetWritsData())
 	end
 	
-	if not KatwynsTaskTimers.savedVariables.isStablesHidden then
-	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Stable"})
+	if not self.savedVariables.isStablesHidden then
+	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, self:GetStablesData())
 	end
 	
-	if not KatwynsTaskTimers.savedVariables.isFenceHidden then
-	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Fence"})
+	if not self.savedVariables.isFenceHidden then
+	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, self:GetFenceData())
 	end
 	
-	if not KatwynsTaskTimers.savedVariables.isScryHidden then
-	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Scry"})
+	if not self.savedVariables.isScryHidden then
+	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, self:GetScryData())
 	end
 	
-	if not KatwynsTaskTimers.savedVariables.isResearchHidden then
-	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Research"})
+	if not self.savedVariables.isResearchHidden then
+	  timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, self:GetResearchData())
 	end
 	
-	if #(KatwynsTaskTimers.savedVariables.customTimers) > 0 then
-	  logger:Debug("RedrawKttFrame: Custom entries aren't implemented yet. How did you get here?")
+	if #(self.savedVariables.customTimers) > 0 then
+	  self:Debug("RedrawKttFrame: Custom entries aren't implemented yet. How did you get here?")
 	  --timerData[#timerData + 1] =  ZO_ScrollList_CreateDataEntry(TIMER_TYPE, {key = "Custom"})
 	end
 	
@@ -312,13 +353,98 @@ function KatwynsTaskTimers.RedrawKttFrame()
 	  table.insert(scrollData, timerData[i])
 	end
 		
-	logger:Debug("RedrawKttFrame: Before List Commit")
+	self:Debug("RedrawKttFrame: Before List Commit")
 	
 	ZO_ScrollList_Commit(scrollList)
 	
-	logger:Debug("RedrawKttFrame: Leaving")
+	self:Debug("RedrawKttFrame: Leaving")
 end
 
+function KatwynsTaskTimers:GetWritsData()
+
+	self:Debug("GetWritsData: Entered")
+	
+    local timerDatum = {}
+	timerDatum.key = "Writs"
+	timerDatum.text = ""
+	timerDatum.color = self.Colors.normal
+	
+	self:Debug("GetWritsData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
+	
+	return timerDatum
+
+end
+
+function KatwynsTaskTimers:GetStablesData()
+
+	self:Debug("GetStablesData: Entered")
+	
+    local trainTime = GetTimeUntilCanBeTrained()
+	
+	self:Debug("GetStablesData: GetTimeUntilCanBeTrained = <<1>>", trainTime/1000)
+	
+	local durationString, nextUpdate = FormatTimeSeconds(trainTime/1000, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_MINUTES, TIME_FORMAT_DIRECTION_DESCENDING)
+	
+	self:Debug("GetStablesData: durationString: '<<1>>', nextUpdate: <<2>>", durationString, nextUpdate)
+	
+    local timerDatum = {}
+	timerDatum.key = "Stable"
+	timerDatum.text = durationString
+	timerDatum.color = self.Colors.red
+	if trainTime > 0 then
+	  timerDatum.color = self.Colors.green
+	end
+	
+	self:Debug("GetStablesData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
+	
+	return timerDatum
+
+end
+
+function KatwynsTaskTimers:GetFenceData()
+
+	self:Debug("GetFenceData: Entered")
+	
+    local timerDatum = {}
+	timerDatum.key = "Fence"
+	timerDatum.text = ""
+	timerDatum.color = self.Colors.normal
+	
+	self:Debug("GetFenceData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
+	
+	return timerDatum
+
+end
+
+function KatwynsTaskTimers:GetScryData()
+
+	self:Debug("GetScryData: Entered")
+	
+    local timerDatum = {}
+	timerDatum.key = "Scry"
+	timerDatum.text = ""
+	timerDatum.color = self.Colors.normal
+	
+	self:Debug("GetScryData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
+	
+	return timerDatum
+
+end
+
+function KatwynsTaskTimers:GetResearchData()
+
+	self:Debug("GetResearchData: Entered")
+	
+    local timerDatum = {}
+	timerDatum.key = "Research"
+	timerDatum.text = ""
+	timerDatum.color = self.Colors.normal
+	
+	self:Debug("GetResearchData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
+	
+	return timerDatum
+
+end
 
 
 function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
@@ -335,8 +461,11 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
     self.savedVariables = ZO_SavedVars:NewAccountWide("KatwynsTaskTimersVariables", self.variablesVersion, nil, self.Default)
 	--self.savedCharVariables  = ZO_SavedVars:NewCharacterIdSettings("KatwynsTaskTimersVariables", self.variablesVersion, nil, self.CharDefault)
 	self:CreateMenu()
-
-    LibCustomMenu:RegisterContextMenu(function(...) self:ShowContextMenu(...) end, LibCustomMenu.CATEGORY_LATE)
+	
+	self.Colors = {}
+	self.Colors.red = ZO_ColorDef:New(0.8, 0, 0, 1)
+	self.Colors.green = ZO_ColorDef:New(0, 0.8, 0, 1)
+	self.Colors.normal = ZO_NORMAL_TEXT
 	
 	-- Build the timer list
 	local scrollList = WINDOW_MANAGER:CreateControlFromVirtual("KttFrameTimerList", KttFrame, "ZO_ScrollList")

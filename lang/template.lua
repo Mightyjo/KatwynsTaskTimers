@@ -2,6 +2,7 @@
 SafeAddString("KATWYNS_TASK_TIMERS_LOADED", "Loaded", 2)
 SafeAddString("KATWYNS_TASK_TIMERS_OPTION_DEBUG", "Show Debug Log", 2)
 SafeAddString("KATWYNS_TASK_TIMERS_OPTION_HIDDEN", "Hide Timers", 2)
+SafeAddString("KATWYNS_TASK_TIMERS_OPTION_OPACITY", "Timer Frame Opacity", 2)
 SafeAddString("KATWYNS_TASK_TIMERS_FRAME_TITLE", "Task Timers", 2)
 SafeAddString("KATWYNS_TASK_TIMERS_OPTION_TITLE_HIDDEN", "Hide Frame Title", 2)
 SafeAddString("KATWYNS_TASK_TIMERS_OPTION_WRITS_HIDDEN", "Hide Writs Reminder", 2)

@@ -1,12 +1,6 @@
 <GuiXml>
   <Controls>
-		
-	<Label name="KttFrameTimerTemplate" font="ZoFontWindowTitle" inheritAlpha="true" text="Timer" virtual="true">
-	</Label>
-	
-	<!-- Virtual control templates above this comment -->
-	
-    <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true" hidden="false">
+    <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true" alpha="0.6" hidden="false">
       <Dimensions x="300" y="100" />
       <Anchor point="BOTTOM" relativeTo="GuiRoot" relativePoint="CENTER" offsetY="-20" />
  
