@@ -3,8 +3,10 @@ KatwynsTaskTimers = {
     shortName = "KTT",
     name = "KatwynsTaskTimers",
     version = "0.1.0",
-    logger = nil,
 	variablesVersion = 1,
+	logger = nil,
+	nextUpdateId = nil,
+	updateFrequency = 15000,
 	Default = {
 	  isDebug = false,
 	  isHidden = false,
@@ -171,16 +173,17 @@ function KatwynsTaskTimers:CreateMenu()
     LibAddonMenu2:RegisterOptionControls(self.displayName, optionsTable)
 end
 
-function KatwynsTaskTimers:Info(text, ...)
+function KatwynsTaskTimers:Verbose(text, ...)
     
-	if self.logger then
-	  self:Log(LibDebugLogger.LOG_LEVEL_INFO, text, ...)
-	else
-	  if ... ~= nil then
-	    text = zo_strformat(text, unpack({...}))
-	  end
-	  d( string.format("%s: %s", self.name, text) )
+	if self.logger == nil then
+	  return
 	end
+	
+	if self.savedVariables.isDebug == false then
+	  return
+	end
+	  
+	self:Log(LibDebugLogger.LOG_LEVEL_VERBOSE, text, ...)
 	
 end
 
@@ -195,6 +198,19 @@ function KatwynsTaskTimers:Debug(text, ...)
 	end
 	  
 	self:Log(LibDebugLogger.LOG_LEVEL_DEBUG, text, ...)
+	
+end
+
+function KatwynsTaskTimers:Info(text, ...)
+    
+	if self.logger then
+	  self:Log(LibDebugLogger.LOG_LEVEL_INFO, text, ...)
+	else
+	  if ... ~= nil then
+	    text = zo_strformat(text, unpack({...}))
+	  end
+	  d( string.format("%s: %s", self.name, text) )
+	end
 	
 end
 
@@ -276,13 +292,12 @@ function KatwynsTaskTimers:RestorePosition()
 end
 
 function KatwynsTaskTimers.InitializeTimer(control, data)
-    KatwynsTaskTimers:Debug("InitializeTimer(): Entered")
     return KatwynsTaskTimers:_InitializeTimer(control, data)
 end
 
 function KatwynsTaskTimers:_InitializeTimer(control, data)
 
-    self:Debug("_InitializeTimer(self): Entered")
+    self:Verbose("_InitializeTimer(self): Entered")
 
 	control:SetFont("ZoFontWinH4")
 	if data.text then
@@ -296,9 +311,13 @@ function KatwynsTaskTimers:_InitializeTimer(control, data)
     
 end
 
+function KatwynsTaskTimers._RedrawKttFrame(id)
+    return KatwynsTaskTimers:RedrawKttFrame()
+end
+
 function KatwynsTaskTimers:RedrawKttFrame()
     
-	self:Debug("RedrawKttFrame: Entered")
+	self:Verbose("RedrawKttFrame: Entered")
     -- Should we show the timers at all?
 	KttFrame:SetHidden( self.savedVariables.isHidden )
 	if self.savedVariables.isHidden then
@@ -315,11 +334,11 @@ function KatwynsTaskTimers:RedrawKttFrame()
 	local TIMER_TYPE = 1
 	local scrollList = KttFrame:GetNamedChild("TimerList")
 	
-	if scrollList then self.logger:Debug("RedrawKttFrame: scrollList found") end
+	if scrollList then self.logger:Verbose("RedrawKttFrame: scrollList found") end
 	
 	ZO_ScrollList_Clear(scrollList)
 	
-	self:Debug("RedrawKttFrame: Before List Entry Creation")
+	self:Verbose("RedrawKttFrame: Before List Entry Creation")
 	
 	local scrollData = ZO_ScrollList_GetDataList(scrollList)
 	local timerData = {}
@@ -353,16 +372,18 @@ function KatwynsTaskTimers:RedrawKttFrame()
 	  table.insert(scrollData, timerData[i])
 	end
 		
-	self:Debug("RedrawKttFrame: Before List Commit")
+	self:Verbose("RedrawKttFrame: Before List Commit")
 	
 	ZO_ScrollList_Commit(scrollList)
 	
-	self:Debug("RedrawKttFrame: Leaving")
+	self.nextUpdateId = zo_callLater(self._RedrawKttFrame, self.updateFrequency)
+	
+	self:Verbose("RedrawKttFrame: Leaving")
 end
 
 function KatwynsTaskTimers:GetWritsData()
 
-	self:Debug("GetWritsData: Entered")
+	self:Verbose("GetWritsData: Entered")
 	
     local timerDatum = {}
 	timerDatum.key = "Writs"
@@ -377,15 +398,15 @@ end
 
 function KatwynsTaskTimers:GetStablesData()
 
-	self:Debug("GetStablesData: Entered")
+	self:Verbose("GetStablesData: Entered")
 	
     local trainTime = GetTimeUntilCanBeTrained()
 	
-	self:Debug("GetStablesData: GetTimeUntilCanBeTrained = <<1>>", trainTime/1000)
+	self:Verbose("GetStablesData: GetTimeUntilCanBeTrained = <<1>>", trainTime/ZO_ONE_SECOND_IN_MILLISECONDS )
 	
-	local durationString, nextUpdate = FormatTimeSeconds(trainTime/1000, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_MINUTES, TIME_FORMAT_DIRECTION_DESCENDING)
+	local durationString, nextUpdate = FormatTimeSeconds(trainTime/ZO_ONE_SECOND_IN_MILLISECONDS , TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
 	
-	self:Debug("GetStablesData: durationString: '<<1>>', nextUpdate: <<2>>", durationString, nextUpdate)
+	self:Verbose("GetStablesData: durationString: '<<1>>', nextUpdate: <<2>>", durationString, nextUpdate)
 	
     local timerDatum = {}
 	timerDatum.key = "Stable"
@@ -403,11 +424,16 @@ end
 
 function KatwynsTaskTimers:GetFenceData()
 
-	self:Debug("GetFenceData: Entered")
+	self:Verbose("GetFenceData: Entered")
+	
+	local totalLaunders, laundersUsed, launderResetTimeSeconds = GetFenceLaunderTransactionInfo()
+	local totalSells, sellsUsed, sellResetTimeSeconds = GetFenceSellTransactionInfo()
+	
+	local resetTimeString = FormatTimeSeconds(launderResetTimeSeconds, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
 	
     local timerDatum = {}
 	timerDatum.key = "Fence"
-	timerDatum.text = ""
+	timerDatum.text = zo_strformat("<<1>>/<<2>>; Launder: <<3>>/<<4>>: <<5>>", sellsUsed, totalSells, laundersUsed, totalLaunders, resetTimeString)
 	timerDatum.color = self.Colors.normal
 	
 	self:Debug("GetFenceData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
@@ -418,7 +444,7 @@ end
 
 function KatwynsTaskTimers:GetScryData()
 
-	self:Debug("GetScryData: Entered")
+	self:Verbose("GetScryData: Entered")
 	
     local timerDatum = {}
 	timerDatum.key = "Scry"
@@ -433,7 +459,7 @@ end
 
 function KatwynsTaskTimers:GetResearchData()
 
-	self:Debug("GetResearchData: Entered")
+	self:Verbose("GetResearchData: Entered")
 	
     local timerDatum = {}
 	timerDatum.key = "Research"
