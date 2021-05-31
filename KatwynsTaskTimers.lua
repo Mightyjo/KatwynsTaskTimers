@@ -461,9 +461,26 @@ function KatwynsTaskTimers:GetResearchData()
 
 	self:Verbose("GetResearchData: Entered")
 	
+	local now = os.time()
+	local tz = os.difftime(now, os.time(os.date("!*t",now)))
+	
+	local resetTimestamp = os.date("!*t", now)
+	if resetTimestamp.hour >= 7 then
+	    resetTimestamp.day = resetTimestamp.day + 1
+	end
+	resetTimestamp.hour = 7
+	resetTimestamp.min = 0
+	resetTimestamp.sec = 0
+	
+	local nowTimestamp = os.date("*t", now)
+	nowTimestamp.isdst = false
+	
+	local resetTime = (os.time(resetTimestamp) + tz) - (os.time(nowTimestamp))
+	local resetTimeString = FormatTimeSeconds(resetTime, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
+	
     local timerDatum = {}
 	timerDatum.key = "Research"
-	timerDatum.text = ""
+	timerDatum.text = resetTimeString
 	timerDatum.color = self.Colors.normal
 	
 	self:Debug("GetResearchData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
