@@ -407,7 +407,7 @@ function KatwynsTaskTimers:GetWritsData()
 	
 	local nowTimestamp, resetTimestamp, timezone = self:GetDailyReset()
 	
-	local resetTime = (os.time(resetTimestamp) + timezone) - (os.time(nowTimestamp))
+	local resetTime = os.difftime((os.time(resetTimestamp) + timezone),os.time(nowTimestamp))
 	local resetTimeString = FormatTimeSeconds(resetTime, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
 	
     local timerDatum = {}
@@ -451,8 +451,12 @@ function KatwynsTaskTimers:GetFenceData()
 
 	self:Verbose("GetFenceData: Entered")
 	
+	local nowTimestamp, _ = self:GetDailyReset()
+	
 	local totalLaunders, laundersUsed, launderResetTimeSeconds = GetFenceLaunderTransactionInfo()
-	local totalSells, sellsUsed, sellResetTimeSeconds = GetFenceSellTransactionInfo()
+	local totalSells, sellsUsed, _ = GetFenceSellTransactionInfo()
+	
+	launderResetTimeSeconds = math.min( launderResetTimeSeconds, (60*60*24) )
 	
 	local resetTimeString = FormatTimeSeconds(launderResetTimeSeconds, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
 	
@@ -522,7 +526,7 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
 	local scrollList = WINDOW_MANAGER:CreateControlFromVirtual("KttFrameTimerList", KttFrame, "ZO_ScrollList")
 	local width, height = KttFrame:GetDimensions()
 	scrollList:SetDimensions(width-10, height-10)
-	scrollList:SetAnchor(LEFT, KttFrame, LEFT, 5, 5)
+	scrollList:SetAnchor(LEFT, KttFrame, LEFT, 15, 5)
 	ZO_ScrollList_AddDataType(scrollList, KatwynsTaskTimers.TIMER_TYPE, "KttTimerTemplate", 20, KatwynsTaskTimers.InitializeTimer)
 	
 	self:RestorePosition()
