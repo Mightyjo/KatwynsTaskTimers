@@ -1,7 +1,13 @@
 <GuiXml>
   <Controls>
+    <Label name="KttTimerTemplate" virtual="true" color="ZO_NORMAL_TEXT" inherits="ZO_SelectableLabel">
+	    <Anchor point="LEFT" relativeTo="$(parent)" relativePoint="LEFT" />
+    </Label>
+	
+	<!-- Non-virtual, non-templates below this line -->
+  
     <TopLevelControl name="KttFrame" mouseEnabled="true" movable="true" clampedToScreen="true" alpha="0.6" hidden="false">
-      <Dimensions x="300" y="100" />
+      <Dimensions x="300" y="120" />
       <Anchor point="BOTTOM" relativeTo="GuiRoot" relativePoint="CENTER" offsetY="-20" />
  
       <OnMoveStop>

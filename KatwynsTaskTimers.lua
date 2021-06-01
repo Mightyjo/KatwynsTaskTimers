@@ -299,7 +299,7 @@ function KatwynsTaskTimers:_InitializeTimer(control, data)
 
     self:Verbose("_InitializeTimer(self): Entered")
 
-	control:SetFont("ZoFontWinH4")
+	control:SetFont("ZoFontWinT2")
 	if data.text then
       control:SetText(string.format("%s: %s", data.key, data.text))
 	else
@@ -381,13 +381,38 @@ function KatwynsTaskTimers:RedrawKttFrame()
 	self:Verbose("RedrawKttFrame: Leaving")
 end
 
+function KatwynsTaskTimers:GetDailyReset()
+
+    local now = os.time()
+	local tz = os.difftime(now, os.time(os.date("!*t",now)))
+	
+	local resetTimestamp = os.date("!*t", now)
+	if resetTimestamp.hour >= 7 then
+	    resetTimestamp.day = resetTimestamp.day + 1
+	end
+	resetTimestamp.hour = 7
+	resetTimestamp.min = 0
+	resetTimestamp.sec = 0
+	
+	local nowTimestamp = os.date("*t", now)
+	nowTimestamp.isdst = false
+	
+	return nowTimestamp, resetTimestamp, tz
+	
+end
+
 function KatwynsTaskTimers:GetWritsData()
 
 	self:Verbose("GetWritsData: Entered")
 	
+	local nowTimestamp, resetTimestamp, timezone = self:GetDailyReset()
+	
+	local resetTime = (os.time(resetTimestamp) + timezone) - (os.time(nowTimestamp))
+	local resetTimeString = FormatTimeSeconds(resetTime, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
+	
     local timerDatum = {}
 	timerDatum.key = "Writs"
-	timerDatum.text = ""
+	timerDatum.text = resetTimeString
 	timerDatum.color = self.Colors.normal
 	
 	self:Debug("GetWritsData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
@@ -400,11 +425,11 @@ function KatwynsTaskTimers:GetStablesData()
 
 	self:Verbose("GetStablesData: Entered")
 	
-    local trainTime = GetTimeUntilCanBeTrained()
+    local trainTime = (GetTimeUntilCanBeTrained()/ZO_ONE_SECOND_IN_MILLISECONDS)
 	
-	self:Verbose("GetStablesData: GetTimeUntilCanBeTrained = <<1>>", trainTime/ZO_ONE_SECOND_IN_MILLISECONDS )
+	self:Verbose("GetStablesData: GetTimeUntilCanBeTrained = <<1>>", trainTime)
 	
-	local durationString, nextUpdate = FormatTimeSeconds(trainTime/ZO_ONE_SECOND_IN_MILLISECONDS , TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
+	local durationString, nextUpdate = FormatTimeSeconds(trainTime , TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
 	
 	self:Verbose("GetStablesData: durationString: '<<1>>', nextUpdate: <<2>>", durationString, nextUpdate)
 	
@@ -460,27 +485,10 @@ end
 function KatwynsTaskTimers:GetResearchData()
 
 	self:Verbose("GetResearchData: Entered")
-	
-	local now = os.time()
-	local tz = os.difftime(now, os.time(os.date("!*t",now)))
-	
-	local resetTimestamp = os.date("!*t", now)
-	if resetTimestamp.hour >= 7 then
-	    resetTimestamp.day = resetTimestamp.day + 1
-	end
-	resetTimestamp.hour = 7
-	resetTimestamp.min = 0
-	resetTimestamp.sec = 0
-	
-	local nowTimestamp = os.date("*t", now)
-	nowTimestamp.isdst = false
-	
-	local resetTime = (os.time(resetTimestamp) + tz) - (os.time(nowTimestamp))
-	local resetTimeString = FormatTimeSeconds(resetTime, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
-	
+		
     local timerDatum = {}
 	timerDatum.key = "Research"
-	timerDatum.text = resetTimeString
+	timerDatum.text = ""
 	timerDatum.color = self.Colors.normal
 	
 	self:Debug("GetResearchData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
@@ -513,9 +521,9 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
 	-- Build the timer list
 	local scrollList = WINDOW_MANAGER:CreateControlFromVirtual("KttFrameTimerList", KttFrame, "ZO_ScrollList")
 	local width, height = KttFrame:GetDimensions()
-	scrollList:SetDimensions(width, height)
-	scrollList:SetAnchor(LEFT, KttFrame, LEFT)
-	ZO_ScrollList_AddDataType(scrollList, KatwynsTaskTimers.TIMER_TYPE, "ZO_SelectableLabel", 20, KatwynsTaskTimers.InitializeTimer)
+	scrollList:SetDimensions(width-10, height-10)
+	scrollList:SetAnchor(LEFT, KttFrame, LEFT, 5, 5)
+	ZO_ScrollList_AddDataType(scrollList, KatwynsTaskTimers.TIMER_TYPE, "KttTimerTemplate", 20, KatwynsTaskTimers.InitializeTimer)
 	
 	self:RestorePosition()
 	self:RedrawKttFrame()
