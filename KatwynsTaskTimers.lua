@@ -21,6 +21,10 @@ KatwynsTaskTimers = {
 	  isResearchHidden = false,
 	  customTimers = {}
 	},
+	CharDefault = {
+	  researchTimersInitialized = false,
+	  researchTimers = {}
+	},
 	TIMER_TYPE = 1,
 	
 }
@@ -489,16 +493,117 @@ end
 function KatwynsTaskTimers:GetResearchData()
 
 	self:Verbose("GetResearchData: Entered")
-		
+	
+	local nowTimestamp, _ = self:GetDailyReset()
+	
     local timerDatum = {}
 	timerDatum.key = "Research"
 	timerDatum.text = ""
 	timerDatum.color = self.Colors.normal
 	
+	if next(self.savedCharVariables.researchTimers) then
+		local shortestTimer = nil
+		for k, v in pairs(self.savedCharVariables.researchTimers) do
+			if shortestTimer then
+				if v.completeAtTime < shortestTimer.completeAtTime then shortestTimer = v end
+			else
+				shortestTimer = v
+			end
+		end
+		local researchLineName, researchLineIcon, _ = GetSmithingResearchLineInfo(shortestTimer.craftingSkillType, shortestTimer.researchLineIndex)
+		local tempTime = math.max(0, shortestTimer.completeAtTime - os.time(nowTimestamp))
+		local tempTimeString = FormatTimeSeconds(tempTime, TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_DIRECTION_DESCENDING)
+		timerDatum.text = zo_strformat("<<1>> (<<2>>)", tempTimeString, researchLineName)
+	end
+	
 	self:Debug("GetResearchData: Returning {key:<<1>>, text:'<<2>>', color:<<3>>", timerDatum.key, timerDatum.text, timerDatum.color:ToHex())
 	
 	return timerDatum
 
+end
+
+function KatwynsTaskTimers.MakeResearchKey(craftingSkillType, researchLineIndex, traitIndex)
+	return zo_strformat("<<1>>_<<2>>_<<3>>", craftingSkillType, researchLineIndex, traitIndex)
+end
+
+function KatwynsTaskTimers:CreateResearchData(craftingSkillType, researchLineIndex, traitIndex)
+	local researchKey = KatwynsTaskTimers.MakeResearchKey(craftingSkillType, researchLineIndex, traitIndex)
+	local nowTimestamp, _ = self:GetDailyReset()
+	local researchDuration, researchRemaining = GetSmithingResearchLineTraitTimes(craftingSkillType, researchLineIndex, traitIndex)
+	
+	local researchTimer = {}
+	researchTimer.completeAtTime = os.time(nowTimestamp) + researchRemaining
+	researchTimer.craftingSkillType = craftingSkillType
+	researchTimer.researchLineIndex = researchLineIndex
+	researchTimer.traitIndex = traitIndex
+	
+	self.savedCharVariables.researchTimers[researchKey] = researchTimer
+	
+	return
+end
+
+function KatwynsTaskTimers:DeleteResearchData(craftingSkillType, researchLineIndex, traitIndex)
+	local researchKey = KatwynsTaskTimers.MakeResearchKey(craftingSkillType, researchLineIndex, traitIndex)
+	
+	self.savedCharVariables.researchTimers[researchKey] = nil
+	
+	
+	return
+end
+
+function KatwynsTaskTimers:InitializeResearchData()
+	local craftingSkillTypes = {}
+	table.insert(craftingSkillTypes, CRAFTING_TYPE_BLACKSMITHING)
+	table.insert(craftingSkillTypes, CRAFTING_TYPE_CLOTHIER)
+	table.insert(craftingSkillTypes, CRAFTING_TYPE_ENCHANTING)
+	table.insert(craftingSkillTypes, CRAFTING_TYPE_JEWELRYCRAFTING)
+	table.insert(craftingSkillTypes, CRAFTING_TYPE_WOODWORKING)
+	
+	self.savedCharVariables.researchTimers = {}
+	
+	local nowTimestamp, _ = self:GetDailyReset()
+	
+	for _, craftingSkillType in ipairs(craftingSkillTypes) do
+		for researchLineIndex = 1, GetNumSmithingResearchLines(craftingSkillType) do
+			local _, _, numTraits, _ = GetSmithingResearchLineInfo(craftingSkillType, researchLineIndex)
+			if numTraits > 0 then
+				for traitIndex = 1, numTraits do
+					local _, _, known = GetSmithingResearchLineTraitInfo(craftingSkillType, researchLineIndex, traitIndex)
+					if not known then
+						local _, remaining = GetSmithingResearchLineTraitTimes(craftingSkillType, researchLineIndex, traitIndex)
+						if remaining then
+							local researchTimer = {}
+							researchTimer.completeAtTime = os.time(nowTimestamp) + remaining
+							researchTimer.craftingSkillType = craftingSkillType
+							researchTimer.researchLineIndex = researchLineIndex
+							researchTimer.traitIndex = traitIndex
+							local researchKey = KatwynsTaskTimers.MakeResearchKey(craftingSkillType, researchLineIndex, traitIndex)
+							self.savedCharVariables.researchTimers[researchKey] = researchTimer
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	return
+end
+
+
+function KatwynsTaskTimers:OnSmithingTraitResearchCanceled(eventCode, craftingSkillType, researchLineIndex, traitIndex)
+	self:DeleteResearchData(craftingSkillType, researchLineIndex, traitIndex)
+end
+
+function KatwynsTaskTimers:OnSmithingTraitResearchCompleted(eventCode, craftingSkillType, researchLineIndex, traitIndex)
+	self:DeleteResearchData(craftingSkillType, researchLineIndex, traitIndex)
+end
+
+function KatwynsTaskTimers:OnSmithingTraitResearchStarted(eventCode, craftingSkillType, researchLineIndex, traitIndex)
+	self:CreateResearchData(craftingSkillType, researchLineIndex, traitIndex)
+end
+
+function KatwynsTaskTimers:OnSmithingTraitResearchTimesUpdated(eventCode)
+	self:InitializeResearchData()
 end
 
 
@@ -514,7 +619,7 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
 	end
 
     self.savedVariables = ZO_SavedVars:NewAccountWide("KatwynsTaskTimersVariables", self.variablesVersion, nil, self.Default)
-	--self.savedCharVariables  = ZO_SavedVars:NewCharacterIdSettings("KatwynsTaskTimersVariables", self.variablesVersion, nil, self.CharDefault)
+	self.savedCharVariables  = ZO_SavedVars:NewCharacterIdSettings("KatwynsTaskTimersVariables", self.variablesVersion, nil, self.CharDefault)
 	self:CreateMenu()
 	
 	self.Colors = {}
@@ -529,6 +634,11 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
 	scrollList:SetAnchor(LEFT, KttFrame, LEFT, 15, 5)
 	ZO_ScrollList_AddDataType(scrollList, KatwynsTaskTimers.TIMER_TYPE, "KttTimerTemplate", 20, KatwynsTaskTimers.InitializeTimer)
 	
+	if not self.savedCharVariables.researchTimersInitialized then
+		self:InitializeResearchData()
+		self.savedCharVariables.researchTimersInitialized = true
+	end
+	
 	self:RestorePosition()
 	self:RedrawKttFrame()
 	
@@ -542,3 +652,8 @@ function KatwynsTaskTimers:OnAddOnLoaded(event, addonName)
 end
 
 EVENT_MANAGER:RegisterForEvent(KatwynsTaskTimers.name, EVENT_ADD_ON_LOADED, function(...) KatwynsTaskTimers:OnAddOnLoaded(...) end)
+
+EVENT_MANAGER:RegisterForEvent(KatwynsTaskTimers.name, EVENT_SMITHING_TRAIT_RESEARCH_CANCELED, function(...) KatwynsTaskTimers:OnSmithingTraitResearchCanceled(...) end)
+EVENT_MANAGER:RegisterForEvent(KatwynsTaskTimers.name, EVENT_SMITHING_TRAIT_RESEARCH_COMPLETED , function(...) KatwynsTaskTimers:OnSmithingTraitResearchCompleted(...) end)
+EVENT_MANAGER:RegisterForEvent(KatwynsTaskTimers.name, EVENT_SMITHING_TRAIT_RESEARCH_STARTED, function(...) KatwynsTaskTimers:OnSmithingTraitResearchStarted(...) end)
+EVENT_MANAGER:RegisterForEvent(KatwynsTaskTimers.name, EVENT_SMITHING_TRAIT_RESEARCH_TIMES_UPDATED , function(...) KatwynsTaskTimers:OnSmithingTraitResearchTimesUpdated(...) end)
