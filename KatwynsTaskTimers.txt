@@ -1,7 +1,7 @@
 ## Title: KatwynsTaskTimers
-## APIVersion: 100034 100035
-## Version: 0.1.0
-## AddonVersion: 5
+## APIVersion: 101031 101032
+## Version: 0.1.1
+## AddonVersion: 6
 ## SavedVariables: KatwynsTaskTimersVariables
 ## Author: mightyjo
 ## DependsOn: LibAddonMenu-2.0>=32 LibCustomMenu>=635 LibDebugLogger>=180
